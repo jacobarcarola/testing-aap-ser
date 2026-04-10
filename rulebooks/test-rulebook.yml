@@ -1,5 +1,5 @@
 ---
-- name: Listen for webhook events
+- name: React to GitHub webhook events
   hosts: all
   sources:
     - name: my_github
@@ -7,8 +7,14 @@
         host: 0.0.0.0
         port: 5000
   rules:
-    - name: Log any event
-      condition: event.payload is defined
+    - name: Trigger remediation on push
+      condition: event.payload.ref is defined
       action:
-        debug:
-          msg: "Received event: {{ event.payload }}"
+        run_job_template:
+          name: MyRemediationJob
+          organization: Default
+          job_args:
+            extra_vars:
+              event_action: "{{ event.payload.action | default('unknown') }}"
+              repo: "{{ event.payload.repository.full_name | default('unknown') }}"
+              sender: "{{ event.payload.sender.login | default('unknown') }}"
